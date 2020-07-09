@@ -6,6 +6,6 @@ version := "0.1"
 
 scalaVersion := "2.13.3"
 
-libraryDependencies ++= pallas ++ sttp ++ catsEffect
+libraryDependencies ++= pallas ++ sttp ++ catsEffect ++ distage
 
 resolvers += "jitpack" at "https://jitpack.io"
