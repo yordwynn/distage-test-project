@@ -1,9 +1,14 @@
 import distage.Injector
 import endpoint.Endpoint
+import izumi.distage.model.definition.Activation
+import modules.SourceAxis
 
-object MainDummy extends App {
-  Injector()
-    .produceGet[Endpoint](modules.dummyModule)
-    .use(_.run())
-    .unsafeRunSync()
+object Main extends App {
+  def runWith(activation: Activation): Unit =
+    Injector(activation)
+      .produceGet[Endpoint](modules.endpointModule)
+      .use(_.run())
+      .unsafeRunSync()
+
+  runWith(Activation(SourceAxis -> SourceAxis.World))
 }

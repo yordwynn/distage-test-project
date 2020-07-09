@@ -5,7 +5,7 @@ import covid19.model.{CovidData, Response}
 import covid19.sources.Source
 
 
-class DummySource extends Source {
+class MockSource extends Source {
   val data: IO[Response] = IO.pure(new Response(List(
     CovidData("reg1", Option("reg1-iso"), 1000, 500, 300),
     CovidData("reg2", Option("reg1-iso"), 1500, 800, 100),
