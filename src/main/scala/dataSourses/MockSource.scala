@@ -1,4 +1,4 @@
-package dataSources
+package dataSourses
 
 import cats.effect.IO
 import covid19.model.{CovidData, Response}

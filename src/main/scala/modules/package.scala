@@ -1,7 +1,7 @@
 import cats.effect.{ContextShift, IO}
 import covid19.sources.{RussianSource, Source, WorldSource}
-import dataSources.MockSource
-import dataStrorage.{DataStorage, DummyDataStorage}
+import dataSourses.MockSource
+import dataStrorage.{DataStorage, DummyStorage}
 import distage.ModuleDef
 import endpoint.Endpoint
 import sttp.client.{HttpURLConnectionBackend, Identity, NothingT, SttpBackend}
@@ -16,10 +16,10 @@ package object modules {
     make[Source].tagged(SourceAxis.Mock).from[MockSource]
     make[Source].tagged(SourceAxis.Russia).from[RussianSource]
     make[Source].tagged(SourceAxis.World).from[WorldSource]
+    make[DataStorage].fromResource(DummyStorage.managed)
+    make[Endpoint]
+
     addImplicit[SttpBackend[Identity, Nothing, NothingT]]
     addImplicit[ContextShift[IO]]
-
-    make[DataStorage].from[DummyDataStorage]
-    make[Endpoint]
   }
 }

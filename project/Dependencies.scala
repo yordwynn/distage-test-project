@@ -5,6 +5,7 @@ object Version {
   val sttp        = "2.0.1"
   val catsEffect  = "2.1.3"
   val distage     = "0.10.16"
+  val zio         = "1.0.0-RC21"
 }
 
 object Dependencies {
@@ -23,5 +24,10 @@ object Dependencies {
 
   val distage: Seq[ModuleID] = Seq(
     "io.7mind.izumi" %% "distage-core" % Version.distage
+  )
+
+  val zio: Seq[ModuleID] = Seq(
+    "dev.zio" %% "zio" % Version.zio,
+  "dev.zio"  %% "zio-interop-cats"  % "2.1.3.0-RC16"
   )
 }
