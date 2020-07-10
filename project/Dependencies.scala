@@ -1,11 +1,12 @@
 import sbt._
 
 object Version {
-  val pallas      = "2.1.0"
-  val sttp        = "2.0.1"
-  val catsEffect  = "2.1.3"
-  val distage     = "0.10.16"
-  val zio         = "1.0.0-RC21"
+  val pallas          = "2.1.0"
+  val sttp            = "2.0.1"
+  val catsEffect      = "2.1.3"
+  val distage         = "0.10.16"
+  val zio             = "1.0.0-RC21"
+  val zioInteropCats  = "2.1.3.0-RC16"
 }
 
 object Dependencies {
@@ -27,7 +28,10 @@ object Dependencies {
   )
 
   val zio: Seq[ModuleID] = Seq(
-    "dev.zio" %% "zio" % Version.zio,
-  "dev.zio"  %% "zio-interop-cats"  % "2.1.3.0-RC16"
+    "dev.zio" %% "zio" % Version.zio
+  )
+
+  val zioInteropCats: Seq[ModuleID] = Seq(
+    "dev.zio"  %% "zio-interop-cats"  % Version.zioInteropCats
   )
 }
