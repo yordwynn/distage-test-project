@@ -1,4 +1,3 @@
-import cats.effect.IO
 import distage.Injector
 import endpoint.Endpoint
 import izumi.distage.model.definition.Activation
