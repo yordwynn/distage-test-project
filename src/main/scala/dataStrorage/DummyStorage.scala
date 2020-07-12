@@ -18,5 +18,5 @@ final class DummyStorage extends DataStorage {
 }
 
 object DummyStorage {
-  val managed: Managed[Nothing, DummyStorage] = Managed.succeed(new DummyStorage)
+  val managed: Managed[Nothing, DataStorage] = Managed.succeed(new DummyStorage)
 }

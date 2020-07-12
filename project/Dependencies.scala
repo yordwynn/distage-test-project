@@ -28,7 +28,8 @@ object Dependencies {
   )
 
   val distage: Seq[ModuleID] = Seq(
-    "io.7mind.izumi" %% "distage-core" % Version.distage
+    "io.7mind.izumi" %% "distage-core" % Version.distage,
+    "io.7mind.izumi" %% "distage-extension-config" % Version.distage
   )
 
   val zio: Seq[ModuleID] = Seq(
