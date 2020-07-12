@@ -7,10 +7,10 @@ import zio.Task
 import zio.interop.catz._
 
 final class Endpoint(source: Source, storage: DataStorage) {
-  def run: Task[CovidData] = {
+  def run: Task[Option[CovidData]] = {
     source
       .getInfected
       .map(r => storage.save(r.items))
-      .map(_ => storage.mostInfected)
+      .map(_ => storage.getByLocation("Russia"))
   }.to[Task]
 }

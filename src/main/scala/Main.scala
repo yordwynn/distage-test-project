@@ -17,3 +17,7 @@ object Main extends App {
 
   runWith(Activation(SourceAxis -> SourceAxis.World))
 }
+
+object MainCassandra extends App {
+
+}

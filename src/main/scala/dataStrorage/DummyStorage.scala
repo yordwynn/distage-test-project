@@ -12,9 +12,9 @@ final class DummyStorage extends DataStorage {
     this.data.addAll(data.map(x => (x.locationName, x)))
   }
 
-  override def count: Int = data.size
-
-  override def mostInfected: CovidData = data.max(Ordering.by[(String, CovidData), Int](_._2.confirmed))._2
+  override def getByLocation(location: String): Option[CovidData] = {
+    data.get(location)
+  }
 }
 
 object DummyStorage {
