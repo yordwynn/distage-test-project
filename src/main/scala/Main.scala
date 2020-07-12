@@ -1,3 +1,5 @@
+import dataSourses.MockSource
+import dataStrorage.CassandraStorage
 import distage.Injector
 import endpoint.Endpoint
 import izumi.distage.model.definition.Activation
@@ -19,5 +21,9 @@ object Main extends App {
 }
 
 object MainCassandra extends App {
-
+  val cs = new CassandraStorage
+  cs.createTable
+  new MockSource().getInfected.map(_.items).map(cs.save(_)).unsafeRunSync()
+  println(cs.getByLocation("reg1"))
+  cs.close
 }

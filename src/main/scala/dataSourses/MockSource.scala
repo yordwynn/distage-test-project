@@ -7,7 +7,7 @@ import covid19.sources.Source
 
 class MockSource extends Source {
   val data: IO[Response] = IO.pure(new Response(List(
-    CovidData("reg1", Option("reg1-iso"), 1000, 500, 300),
+    CovidData("reg1", Option("reg1-iso"), 1000, 500, 333),
     CovidData("reg2", Option("reg1-iso"), 1500, 800, 100),
     CovidData("reg3", Option("reg1-iso"), 1300, 400, 200),
   )))
