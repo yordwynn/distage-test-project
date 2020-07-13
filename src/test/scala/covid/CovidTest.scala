@@ -36,7 +36,7 @@ trait WorldTest extends CovidTest {
 abstract class SaveCovidDataTest extends CovidTest {
   "Covid" should {
     "get and save" in {
-      (source: Source, storage: DataStorage) =>
+      (source: Source, storage: DataStorage) => {
         for {
           _ <- storage.create
           data <- source.getInfected.to[Task]
@@ -45,6 +45,7 @@ abstract class SaveCovidDataTest extends CovidTest {
           russiaFromSource <- source.getInfectedByLocation("RU").to[Task]
           _ <- assertIO(russiaFromDB.contains(russiaFromSource))
         } yield ()
+      }
     }
   }
 }

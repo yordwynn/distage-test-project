@@ -14,7 +14,7 @@ final case class CassandraConfig(
 
 class CassandraTransactor(val config: CassandraConfig) {
   lazy val cluster: Cluster = Cluster.builder().addContactPoint(config.address).build()
-  lazy val session: Session = cluster.connect(config.keySpace)
+  lazy val session: Session = cluster.connect()
 
   def close(): Unit = cluster.close()
 }
@@ -43,23 +43,32 @@ class CassandraStorage(val transactor: CassandraTransactor) extends DataStorage 
   }
 
   override def create: UIO[Unit] = {
-    val query =
+    val createKeyspace =
       s"""
-        |CREATE TABLE IF NOT EXISTS ${CovidTable.name} (
+         |CREATE KEYSPACE IF NOT EXISTS ${transactor.config.keySpace}
+         |WITH REPLICATION = {
+         |'class' : 'SimpleStrategy',
+         |'replication_factor' : 1
+         | }""".stripMargin
+
+    val createTable =
+      s"""
+        |CREATE TABLE IF NOT EXISTS ${transactor.config.keySpace}.${CovidTable.name} (
         |${CovidTable.Fields.location} TEXT PRIMARY KEY,
         |${CovidTable.Fields.isoCode} TEXT,
         |${CovidTable.Fields.confirmed} INT,
         |${CovidTable.Fields.dead} INT,
         |${CovidTable.Fields.recovered} INT)""".stripMargin
 
-    IO.effectTotal(transactor.session.execute(query))
+    IO.effectTotal(transactor.session.execute(createKeyspace))
+      .map(_ => transactor.session.execute(createTable))
   }
 
   override def save(data: Seq[CovidData]): UIO[Unit] = {
     IO.effectTotal {
     data
       .map(item => QueryBuilder
-        .update(CovidTable.name)
+        .update(transactor.config.keySpace, CovidTable.name)
         .`with`(QueryBuilder.set(CovidTable.Fields.confirmed, item.confirmed))
         .and(QueryBuilder.set(CovidTable.Fields.recovered, item.recovered))
         .and(QueryBuilder.set(CovidTable.Fields.dead, item.deaths))
@@ -69,7 +78,7 @@ class CassandraStorage(val transactor: CassandraTransactor) extends DataStorage 
 
       data
         .map(item => QueryBuilder
-          .insertInto(CovidTable.name)
+          .insertInto(transactor.config.keySpace, CovidTable.name)
           .ifNotExists()
           .value(CovidTable.Fields.location, item.locationName)
           .value(CovidTable.Fields.isoCode, item.isoCode.fold("NaN")(x => x))
@@ -91,7 +100,8 @@ class CassandraStorage(val transactor: CassandraTransactor) extends DataStorage 
       )
     }
 
-    val query = QueryBuilder.select().from("covid").where(QueryBuilder.eq(CovidTable.Fields.location, location))
+    val query = QueryBuilder.select().from(transactor.config.keySpace, CovidTable.name)
+      .where(QueryBuilder.eq(CovidTable.Fields.location, location))
 
     IO.effectTotal {
       transactor.session.execute(query).one() match {

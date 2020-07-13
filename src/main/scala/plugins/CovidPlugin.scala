@@ -30,7 +30,8 @@ object CovidPlugin extends PluginDef {
     }
 
     val configs: ConfigModuleDef = new ConfigModuleDef {
-      makeConfig[CassandraConfig]("cassandra")
+      makeConfig[CassandraConfig]("cassandra.mock").tagged(SourceAxis.Mock)
+      makeConfig[CassandraConfig]("cassandra.world").tagged(SourceAxis.World)
     }
 
     val implicits: ModuleDef = new ModuleDef {
