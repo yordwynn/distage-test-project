@@ -12,11 +12,13 @@ final class DummyStorage extends DataStorage {
     IO.effectTotal(this.data.addAll(data.map(x => (x.locationName, x))))
   }
 
-  override def getByLocation(location: String): UIO[Option[CovidData]] = {
+  override def selectByLocation(location: String): UIO[Option[CovidData]] = {
     IO.effectTotal(data.get(location))
   }
 
   override def create: UIO[Unit] = IO.succeed(())
+
+  override def selectAll: UIO[List[CovidData]] = IO.succeed(data.toList.map(_._2))
 }
 
 object DummyStorage {

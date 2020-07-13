@@ -38,12 +38,26 @@ abstract class SaveCovidDataTest extends CovidTest {
     "get and save" in {
       (source: Source, storage: DataStorage) => {
         for {
+          _ <- storage.create //move to container definition
+          data <- source.getInfected.to[Task]
+          _ <- storage.save(data.items)
+          all <- storage.selectAll
+          count = all.length
+          _ <- assertIO(count > 0)
+        } yield ()
+      }
+    }
+
+    "most infected" in {
+      (source: Source, storage: DataStorage) => {
+        for {
           _ <- storage.create
           data <- source.getInfected.to[Task]
           _ <- storage.save(data.items)
-          russiaFromDB <- storage.getByLocation("Russia")
-          russiaFromSource <- source.getInfectedByLocation("RU").to[Task]
-          _ <- assertIO(russiaFromDB.contains(russiaFromSource))
+          all <- storage.selectAll
+          maxFromApi = data.items.maxBy(_.confirmed)
+          maxFromDb = all.maxBy(_.confirmed)
+          _ <- assertIO(maxFromApi == maxFromDb)
         } yield ()
       }
     }

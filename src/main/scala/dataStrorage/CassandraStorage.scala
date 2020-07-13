@@ -6,6 +6,7 @@ import com.datastax.driver.core.{Cluster, Row, Session}
 import izumi.distage.model.definition.DIResource
 import izumi.fundamentals.platform.functional.Identity
 import zio.{IO, UIO}
+import scala.jdk.CollectionConverters._
 
 final case class CassandraConfig(
   address: String,
@@ -89,17 +90,17 @@ class CassandraStorage(val transactor: CassandraTransactor) extends DataStorage 
     }
   }
 
-  override def getByLocation(location: String): UIO[Option[CovidData]] = {
-    implicit def rowToCovidData(row: Row): CovidData = {
-      CovidData(
-        row.getString(CovidTable.Fields.location),
-        Option(row.getString(CovidTable.Fields.isoCode)),
-        row.getInt(CovidTable.Fields.confirmed),
-        row.getInt(CovidTable.Fields.recovered),
-        row.getInt(CovidTable.Fields.dead)
-      )
-    }
+  implicit def rowToCovidData(row: Row): CovidData = {
+    CovidData(
+      row.getString(CovidTable.Fields.location),
+      Option(row.getString(CovidTable.Fields.isoCode)),
+      row.getInt(CovidTable.Fields.confirmed),
+      row.getInt(CovidTable.Fields.recovered),
+      row.getInt(CovidTable.Fields.dead)
+    )
+  }
 
+  override def selectByLocation(location: String): UIO[Option[CovidData]] = {
     val query = QueryBuilder.select().from(transactor.config.keySpace, CovidTable.name)
       .where(QueryBuilder.eq(CovidTable.Fields.location, location))
 
@@ -108,6 +109,14 @@ class CassandraStorage(val transactor: CassandraTransactor) extends DataStorage 
         case null => None
         case row => Some(row)
       }
+    }
+  }
+
+  override def selectAll: UIO[List[CovidData]] = {
+    val query = QueryBuilder.select().from(transactor.config.keySpace, CovidTable.name)
+
+    IO.effectTotal {
+      transactor.session.execute(query).all().asScala.toList.map(row => rowToCovidData(row))
     }
   }
 }

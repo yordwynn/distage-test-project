@@ -10,6 +10,6 @@ final class Endpoint(source: Source, storage: DataStorage) {
     source
       .getInfected
       .map(r => storage.save(r.items))
-      .map(_ => storage.getByLocation("Russia"))
+      .map(_ => storage.selectByLocation("Russia"))
   }.unsafeRunSync()
 }
