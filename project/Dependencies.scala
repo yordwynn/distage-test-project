@@ -10,6 +10,7 @@ object Version {
   val slf4j           = "1.7.5"
   val akka            = "2.6.7"
   val cassandra       = "3.9.0"
+  val scalatest       = "3.2.0"
 }
 
 object Dependencies {
@@ -29,7 +30,8 @@ object Dependencies {
 
   val distage: Seq[ModuleID] = Seq(
     "io.7mind.izumi" %% "distage-core" % Version.distage,
-    "io.7mind.izumi" %% "distage-extension-config" % Version.distage
+    "io.7mind.izumi" %% "distage-extension-config" % Version.distage,
+    "io.7mind.izumi" %% "distage-testkit-scalatest" % Version.distage
   )
 
   val zio: Seq[ModuleID] = Seq(
@@ -51,5 +53,9 @@ object Dependencies {
 
   val cassandra: Seq[ModuleID] = Seq(
     "com.datastax.cassandra" % "cassandra-driver-core" % Version.cassandra
+  )
+
+  val scalatest: Seq[ModuleID] = Seq(
+    "org.scalatest" %% "scalatest" % Version.scalatest
   )
 }
