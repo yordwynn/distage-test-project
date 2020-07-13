@@ -1,15 +1,15 @@
 import distage.Injector
-import endpoint.Endpoint
+import endpoint.{Endpoint, EndpointModules}
 import izumi.distage.model.definition.Activation
 import izumi.distage.model.plan.Roots
 import izumi.distage.model.reflection.DIKey
-import modules.SourceAxis
+import plugins.SourceAxis
 import zio.Task
 
 object Main extends App {
   def runWith(activation: Activation): Unit = {
     val res = Injector(activation)
-      .produceF[Task](modules.endpointDummyStorage, Roots(DIKey[Endpoint]))
+      .produceF[Task](EndpointModules.endpointDummyStorage, Roots(DIKey[Endpoint]))
       .use(_.get[Endpoint].run)
 
     println(zio.Runtime.default.unsafeRun(res))
@@ -21,7 +21,7 @@ object Main extends App {
 object MainCassandra extends App {
   def runWith(activation: Activation): Unit = {
     val res = Injector(activation)
-      .produceGet[Endpoint](modules.endpointCassandraStorage)
+      .produceGet[Endpoint](EndpointModules.endpointCassandraStorage)
       .use(x => zio.Runtime.default.unsafeRun(x.run)) //can we run this out of the use?
 
     println(res)

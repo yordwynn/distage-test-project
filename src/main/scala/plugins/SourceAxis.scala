@@ -1,4 +1,4 @@
-package modules
+package plugins
 
 import distage.Axis
 

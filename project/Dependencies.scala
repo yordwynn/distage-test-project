@@ -31,6 +31,9 @@ object Dependencies {
   val distage: Seq[ModuleID] = Seq(
     "io.7mind.izumi" %% "distage-core" % Version.distage,
     "io.7mind.izumi" %% "distage-extension-config" % Version.distage,
+    "io.7mind.izumi" %% "distage-framework" % Version.distage,
+    "io.7mind.izumi" %% "distage-framework-docker" % Version.distage,
+    "io.7mind.izumi" %% "logstage-adapter-slf4j" % Version.distage,
     "io.7mind.izumi" %% "distage-testkit-scalatest" % Version.distage
   )
 
