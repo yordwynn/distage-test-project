@@ -65,3 +65,4 @@ abstract class SaveCovidDataTest extends CovidTest {
 }
 
 final class SaveCovidDataTestWorld extends SaveCovidDataTest with WorldTest
+final class SaveCovidDataTestMock extends SaveCovidDataTest with MockTest
