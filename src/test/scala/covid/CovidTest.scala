@@ -2,12 +2,13 @@ package covid
 
 import covid.docker.{CassandraContainerDef, CassandraDockerModule}
 import covid19.sources.Source
-import dataStrorage.{CassandraStorage, DataStorage}
+import dataStrorage.{CassandraStorage, CassandraTransactor, DataStorage}
 import distage.ModuleDef
 import izumi.distage.model.definition.Activation
 import izumi.distage.model.reflection.DIKey
 import izumi.distage.plugins.PluginConfig
 import izumi.distage.testkit.TestConfig
+import izumi.distage.testkit.TestConfig.ParallelLevel
 import izumi.distage.testkit.scalatest.{AssertIO, DistageBIOEnvSpecScalatest}
 import plugins.SourceAxis
 import zio.{Task, ZIO}
@@ -20,10 +21,9 @@ abstract class CovidTest extends DistageBIOEnvSpecScalatest[ZIO] with AssertIO {
       include(CassandraDockerModule)
     },
     memoizationRoots = Set(
-      DIKey[CassandraStorage],
-      DIKey[CassandraContainerDef.Container]
+      DIKey[CassandraTransactor],
     ),
-    configBaseName = "covid-test"
+    configBaseName = "covid-test",
   )
 }
 

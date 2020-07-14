@@ -21,8 +21,9 @@ object Main extends App {
 object MainCassandra extends App {
   def runWith(activation: Activation): Unit = {
     val res = Injector(activation)
-      .produceGet[Endpoint](EndpointModules.endpointCassandraStorage)
-      .use(x => zio.Runtime.default.unsafeRun(x.run)) //can we run this out of the use?
+      .produceRunF(EndpointModules.endpointCassandraStorage) {
+        (_: Endpoint).run
+      }
 
     println(res)
   }

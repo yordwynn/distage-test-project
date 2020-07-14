@@ -27,7 +27,7 @@ object CovidPlugin extends PluginDef {
     }
 
     val storage: ModuleDef = new ModuleDef {
-      make[CassandraTransactor].fromResource[CassandraTransactorResource]
+      make[CassandraTransactor].fromHas[CassandraTransactorResource]
       make[DataStorage].fromResource[CassandraResource]
       make[PortCheck].from(new PortCheck(3.seconds))
     }

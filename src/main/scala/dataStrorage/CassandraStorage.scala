@@ -1,65 +1,57 @@
 package dataStrorage
 
-import java.net.URI
+import java.net.InetSocketAddress
 
 import com.datastax.driver.core.querybuilder.QueryBuilder
-import covid19.model.CovidData
 import com.datastax.driver.core.{Cluster, ResultSet, Row, Session}
+import covid19.model.CovidData
 import izumi.distage.framework.model.IntegrationCheck
 import izumi.distage.model.definition.DIResource
-import izumi.fundamentals.platform.functional.Identity
 import izumi.fundamentals.platform.integration.{PortCheck, ResourceCheck}
-import zio.{IO, Schedule, ZIO}
+import logstage.LogBIO
+import zio._
+import zio.clock.Clock
+import zio.duration._
 
 import scala.jdk.CollectionConverters._
 
 final case class CassandraConfig(
-  host: String,
   keySpace: String,
-  port: Int,
-  url: String
 )
 
 final case class CassandraPortConfig(
   host: String,
   port: Int,
-) {
-  def substitute(s: String): String = {
-    s.replace("{host}", host).replace("{port}", port.toString)
-  }
+)
+
+final class CassandraTransactor(session: Session, zioBlocking: zio.blocking.Blocking.Service) {
+  // Execute all cassandra requests on Blocking IO pool to not take up threads on CPU pool
+  def request[A](f: Session => A): Task[A] = zioBlocking.effectBlocking(f(session))
 }
 
-class CassandraTransactor(val config: CassandraConfig, val portConfig: CassandraPortConfig) {
-  lazy val cluster: Cluster = Cluster
-    .builder()
-    .addContactPoint(portConfig.host)
-    .withPort(portConfig.port)
-    .build()
-
-  lazy val session: IO[Throwable, Session] = ZIO[Session]({
-    Thread.sleep(1000)
-    cluster.connect()
-  }).retry(Schedule.recurs(100))
-
-  def close(): Unit =
-    cluster.close()
-}
-
-class CassandraTransactorResource(val config: CassandraConfig, val portConfig: CassandraPortConfig, portCheck: PortCheck)
-  extends DIResource.Simple[CassandraTransactor] with IntegrationCheck {
-  override def acquire: Identity[CassandraTransactor] = {
-    new CassandraTransactor(config, portConfig)
-  }
-
-  override def release(resource: CassandraTransactor): Identity[Unit] = {
-    resource.close()
-  }
-
+final class CassandraTransactorResource(
+  portConfig: CassandraPortConfig,
+  portCheck: PortCheck,
+  zioBlocking: zio.blocking.Blocking.Service,
+  log: LogBIO[IO],
+) extends DIResource.OfZIO[Clock, Throwable, CassandraTransactor](
+    (for {
+      cluster <- ZManaged.fromAutoCloseable(ZIO {
+        Cluster
+          .builder()
+          .addContactPointsWithPorts(InetSocketAddress.createUnresolved(portConfig.host, portConfig.port))
+          .build()
+      })
+      session <- ZManaged.fromAutoCloseable(ZIO(cluster.connect()))
+    } yield new CassandraTransactor(session, zioBlocking))
+      .retry(
+        Schedule.tapInput((error: Throwable) => log.info(s"Got $error")) >>>
+        Schedule.recurs(100) >>>
+        Schedule.spaced(1.second)
+          .tapOutput(nTimes => log.info(s"Retrying cassandra connection $nTimes"))))
+    with IntegrationCheck {
   override def resourcesAvailable(): ResourceCheck = {
-    val str = portConfig.substitute(config.url.stripPrefix("jdbc:"))
-    val uri = URI.create(str)
-
-    portCheck.checkUri(uri, portConfig.port, s"Couldn't connect to postgres at uri=$uri defaultPort=${portConfig.port}")
+    portCheck.checkPort(portConfig.host, portConfig.port, s"Couldn't connect to postgres at host=${portConfig.host} defaultPort=${portConfig.port}")
   }
 }
 
@@ -75,48 +67,45 @@ object CovidTable {
   }
 }
 
-class CassandraResource(val transactor: CassandraTransactor) extends DIResource.Simple[CassandraStorage] {
+class CassandraResource(config: CassandraConfig, transactor: CassandraTransactor) extends DIResource.NoClose[Task, CassandraStorage] {
   private def createKeyspace: ZIO[Any, Throwable, ResultSet] = {
     val createKeyspace =
       s"""
-         |CREATE KEYSPACE IF NOT EXISTS ${transactor.config.keySpace}
+         |CREATE KEYSPACE IF NOT EXISTS ${config.keySpace}
          |WITH REPLICATION = {
          |'class' : 'SimpleStrategy',
          |'replication_factor' : 1
          | }""".stripMargin
 
-    transactor.session.map(_.execute(createKeyspace))
+    transactor.request(_.execute(createKeyspace))
   }
 
   private def createTable: IO[Throwable, ResultSet] = {
     val createTable =
       s"""
-         |CREATE TABLE IF NOT EXISTS ${transactor.config.keySpace}.${CovidTable.name} (
+         |CREATE TABLE IF NOT EXISTS ${config.keySpace}.${CovidTable.name} (
          |${CovidTable.Fields.location} TEXT PRIMARY KEY,
          |${CovidTable.Fields.isoCode} TEXT,
          |${CovidTable.Fields.confirmed} INT,
          |${CovidTable.Fields.dead} INT,
          |${CovidTable.Fields.recovered} INT)""".stripMargin
 
-    transactor.session.map(_.execute(createTable))
+    transactor.request(_.execute(createTable))
   }
 
-  override def acquire: Identity[CassandraStorage] = {
-    zio.Runtime.default.unsafeRun(createKeyspace.flatMap(_ => createTable))
-    new CassandraStorage(transactor)
-  }
-
-  override def release(resource: CassandraStorage): Identity[Unit] = {
-
+  override def acquire: Task[CassandraStorage] = {
+    createKeyspace
+      .flatMap(_ => createTable)
+      .as(new CassandraStorage(config, transactor))
   }
 }
 
-class CassandraStorage(val transactor: CassandraTransactor) extends DataStorage {
+class CassandraStorage(config: CassandraConfig, transactor: CassandraTransactor) extends DataStorage {
   override def save(data: Seq[CovidData]): IO[Throwable, Unit] = {
-    transactor.session.map(session => {
+    transactor.request(session => {
       data
         .map(item => QueryBuilder
-          .update(transactor.config.keySpace, CovidTable.name)
+          .update(config.keySpace, CovidTable.name)
           .`with`(QueryBuilder.set(CovidTable.Fields.confirmed, item.confirmed))
           .and(QueryBuilder.set(CovidTable.Fields.recovered, item.recovered))
           .and(QueryBuilder.set(CovidTable.Fields.dead, item.deaths))
@@ -127,7 +116,7 @@ class CassandraStorage(val transactor: CassandraTransactor) extends DataStorage 
     }).map(session => {
       data
         .map(item => QueryBuilder
-          .insertInto(transactor.config.keySpace, CovidTable.name)
+          .insertInto(config.keySpace, CovidTable.name)
           .ifNotExists()
           .value(CovidTable.Fields.location, item.locationName)
           .value(CovidTable.Fields.isoCode, item.isoCode.fold("NaN")(x => x))
@@ -149,18 +138,18 @@ class CassandraStorage(val transactor: CassandraTransactor) extends DataStorage 
   }
 
   override def selectByLocation(location: String): IO[Throwable, Option[CovidData]] = {
-    val query = QueryBuilder.select().from(transactor.config.keySpace, CovidTable.name)
+    val query = QueryBuilder.select().from(config.keySpace, CovidTable.name)
       .where(QueryBuilder.eq(CovidTable.Fields.location, location))
 
-    transactor.session.map(_.execute(query).one() match {
+    transactor.request(_.execute(query).one() match {
       case null => None
       case row => Some(row)
     })
   }
 
   override def selectAll: IO[Throwable ,List[CovidData]] = {
-    val query = QueryBuilder.select().from(transactor.config.keySpace, CovidTable.name)
+    val query = QueryBuilder.select().from(config.keySpace, CovidTable.name)
 
-    transactor.session.map(_.execute(query).all().asScala.toList.map(row => rowToCovidData(row)))
+    transactor.request(_.execute(query).all().asScala.toList.map(row => rowToCovidData(row)))
   }
 }
