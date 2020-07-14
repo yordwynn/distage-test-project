@@ -1,6 +1,6 @@
 package covid
 
-import covid.docker.CassandraDockerModule
+import covid.docker.{CassandraContainerDef, CassandraDockerModule}
 import covid19.sources.Source
 import dataStrorage.{CassandraStorage, DataStorage}
 import distage.ModuleDef
@@ -20,7 +20,8 @@ abstract class CovidTest extends DistageBIOEnvSpecScalatest[ZIO] with AssertIO {
       include(CassandraDockerModule)
     },
     memoizationRoots = Set(
-      DIKey[CassandraStorage]
+      DIKey[CassandraStorage],
+      DIKey[CassandraContainerDef.Container]
     ),
     configBaseName = "covid-test"
   )
