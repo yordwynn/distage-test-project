@@ -1,7 +1,9 @@
 package covid
 
+import covid.docker.CassandraDockerModule
 import covid19.sources.Source
 import dataStrorage.{CassandraStorage, DataStorage}
+import distage.ModuleDef
 import izumi.distage.model.definition.Activation
 import izumi.distage.model.reflection.DIKey
 import izumi.distage.plugins.PluginConfig
@@ -14,6 +16,9 @@ import zio.interop.catz._
 abstract class CovidTest extends DistageBIOEnvSpecScalatest[ZIO] with AssertIO {
   override def config: TestConfig = TestConfig(
     pluginConfig = PluginConfig.cached(packagesEnabled = Seq("plugins")),
+    moduleOverrides = new ModuleDef {
+      include(CassandraDockerModule)
+    },
     memoizationRoots = Set(
       DIKey[CassandraStorage]
     ),

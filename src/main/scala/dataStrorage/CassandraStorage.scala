@@ -1,32 +1,56 @@
 package dataStrorage
 
+import java.net.URI
+
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import covid19.model.CovidData
 import com.datastax.driver.core.{Cluster, Row, Session}
+import izumi.distage.framework.model.IntegrationCheck
 import izumi.distage.model.definition.DIResource
 import izumi.fundamentals.platform.functional.Identity
+import izumi.fundamentals.platform.integration.{PortCheck, ResourceCheck}
 import zio.{IO, UIO}
+
 import scala.jdk.CollectionConverters._
 
 final case class CassandraConfig(
-  address: String,
-  keySpace: String
+  host: String,
+  keySpace: String,
+  port: Int,
+  url: String
 )
 
-class CassandraTransactor(val config: CassandraConfig) {
-  lazy val cluster: Cluster = Cluster.builder().addContactPoint(config.address).build()
+final case class CassandraPortConfig(
+  host: String,
+  port: Int,
+) {
+  def substitute(s: String): String = {
+    s.replace("{host}", host).replace("{port}", port.toString)
+  }
+}
+
+class CassandraTransactor(val config: CassandraConfig, val portConfig: CassandraPortConfig, portCheck: PortCheck) {
+  lazy val cluster: Cluster = Cluster.builder().addContactPoint(config.host).build()
   lazy val session: Session = cluster.connect()
 
   def close(): Unit = cluster.close()
 }
 
-class CassandraResource(val config: CassandraConfig) extends DIResource.Simple[CassandraTransactor] {
+class CassandraResource(val config: CassandraConfig, val portConfig: CassandraPortConfig, portCheck: PortCheck)
+  extends DIResource.Simple[CassandraTransactor] with IntegrationCheck {
   override def acquire: Identity[CassandraTransactor] = {
-    new CassandraTransactor(config)
+    new CassandraTransactor(config, portConfig, portCheck)
   }
 
   override def release(resource: CassandraTransactor): Identity[Unit] = {
     resource.close()
+  }
+
+  override def resourcesAvailable(): ResourceCheck = {
+    val str = portConfig.substitute(config.url.stripPrefix("jdbc:"))
+    val uri = URI.create(str)
+
+    portCheck.checkUri(uri, portConfig.port, s"Couldn't connect to postgres at uri=$uri defaultPort=${portConfig.port}")
   }
 }
 

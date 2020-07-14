@@ -3,13 +3,15 @@ package plugins
 import cats.effect.{ContextShift, IO}
 import covid19.sources.{RussianSource, Source, WorldSource}
 import dataSourses.MockSource
-import dataStrorage.{CassandraConfig, CassandraResource, CassandraStorage, CassandraTransactor, DataStorage}
+import dataStrorage.{CassandraConfig, CassandraPortConfig, CassandraResource, CassandraStorage, CassandraTransactor, DataStorage}
 import distage.ModuleDef
 import distage.plugins.PluginDef
 import izumi.distage.config.ConfigModuleDef
+import izumi.fundamentals.platform.integration.PortCheck
 import sttp.client.{HttpURLConnectionBackend, Identity, NothingT, SttpBackend}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 object CovidPlugin extends PluginDef {
   include(modules.source)
@@ -27,11 +29,14 @@ object CovidPlugin extends PluginDef {
     val storage: ModuleDef = new ModuleDef {
       make[CassandraTransactor].fromResource[CassandraResource]
       make[DataStorage].from[CassandraStorage]
+      make[PortCheck].from(new PortCheck(3.seconds))
     }
 
     val configs: ConfigModuleDef = new ConfigModuleDef {
       makeConfig[CassandraConfig]("cassandra.mock").tagged(SourceAxis.Mock)
       makeConfig[CassandraConfig]("cassandra.world").tagged(SourceAxis.World)
+      makeConfig[CassandraPortConfig]("cassandra.mock").tagged(SourceAxis.Mock)
+      makeConfig[CassandraPortConfig]("cassandra.world").tagged(SourceAxis.World)
     }
 
     val implicits: ModuleDef = new ModuleDef {
