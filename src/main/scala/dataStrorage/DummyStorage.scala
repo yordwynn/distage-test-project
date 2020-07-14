@@ -16,8 +16,6 @@ final class DummyStorage extends DataStorage {
     IO.effectTotal(data.get(location))
   }
 
-  override def create: UIO[Unit] = IO.succeed(())
-
   override def selectAll: UIO[List[CovidData]] = IO.succeed(data.toList.map(_._2))
 }
 

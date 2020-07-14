@@ -4,7 +4,7 @@ import cats.effect.{ContextShift, IO}
 import com.typesafe.config.ConfigFactory
 import covid19.sources.{RussianSource, Source, WorldSource}
 import dataSourses.MockSource
-import dataStrorage.{CassandraConfig, CassandraResource, CassandraStorage, CassandraTransactor, DataStorage, DummyStorage}
+import dataStrorage.{CassandraConfig, CassandraResource, CassandraTransactor, CassandraTransactorResource, DataStorage, DummyStorage}
 import distage.ModuleDef
 import distage.config.ConfigModuleDef
 import izumi.distage.config.model.AppConfig
@@ -34,8 +34,8 @@ object EndpointModules {
     make[Source].tagged(SourceAxis.World).from[WorldSource]
 
     // what if we have a chain of dependent resources? in witch order will they released?
-    make[CassandraTransactor].fromResource[CassandraResource]
-    make[DataStorage].from[CassandraStorage]
+    make[CassandraTransactor].fromResource[CassandraTransactorResource]
+    make[DataStorage].fromResource[CassandraResource]
 
     make[Endpoint]
 

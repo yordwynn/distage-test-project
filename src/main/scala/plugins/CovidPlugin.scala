@@ -3,7 +3,7 @@ package plugins
 import cats.effect.{ContextShift, IO}
 import covid19.sources.{RussianSource, Source, WorldSource}
 import dataSourses.MockSource
-import dataStrorage.{CassandraConfig, CassandraPortConfig, CassandraResource, CassandraStorage, CassandraTransactor, DataStorage}
+import dataStrorage.{CassandraConfig, CassandraPortConfig, CassandraResource, CassandraStorage, CassandraTransactor, CassandraTransactorResource, DataStorage}
 import distage.ModuleDef
 import distage.plugins.PluginDef
 import izumi.distage.config.ConfigModuleDef
@@ -27,9 +27,9 @@ object CovidPlugin extends PluginDef {
     }
 
     val storage: ModuleDef = new ModuleDef {
-      make[CassandraTransactor].fromResource[CassandraResource]
-      make[DataStorage].from[CassandraStorage]
-      make[PortCheck].from(new PortCheck(3.seconds))
+      make[CassandraTransactor].fromResource[CassandraTransactorResource]
+      make[DataStorage].fromResource[CassandraResource]
+      make[PortCheck].from(new PortCheck(100.seconds))
     }
 
     val configs: ConfigModuleDef = new ConfigModuleDef {

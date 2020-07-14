@@ -4,7 +4,7 @@ import java.net.URI
 
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import covid19.model.CovidData
-import com.datastax.driver.core.{Cluster, Row, Session}
+import com.datastax.driver.core.{Cluster, ResultSet, Row, Session}
 import izumi.distage.framework.model.IntegrationCheck
 import izumi.distage.model.definition.DIResource
 import izumi.fundamentals.platform.functional.Identity
@@ -29,17 +29,17 @@ final case class CassandraPortConfig(
   }
 }
 
-class CassandraTransactor(val config: CassandraConfig, val portConfig: CassandraPortConfig, portCheck: PortCheck) {
-  lazy val cluster: Cluster = Cluster.builder().addContactPoint(config.host).build()
+class CassandraTransactor(val config: CassandraConfig, val portConfig: CassandraPortConfig) {
+  lazy val cluster: Cluster = Cluster.builder().addContactPoint(portConfig.host).withPort(portConfig.port).build()
   lazy val session: Session = cluster.connect()
 
   def close(): Unit = cluster.close()
 }
 
-class CassandraResource(val config: CassandraConfig, val portConfig: CassandraPortConfig, portCheck: PortCheck)
+class CassandraTransactorResource(val config: CassandraConfig, val portConfig: CassandraPortConfig, portCheck: PortCheck)
   extends DIResource.Simple[CassandraTransactor] with IntegrationCheck {
   override def acquire: Identity[CassandraTransactor] = {
-    new CassandraTransactor(config, portConfig, portCheck)
+    new CassandraTransactor(config, portConfig)
   }
 
   override def release(resource: CassandraTransactor): Identity[Unit] = {
@@ -54,20 +54,20 @@ class CassandraResource(val config: CassandraConfig, val portConfig: CassandraPo
   }
 }
 
-class CassandraStorage(val transactor: CassandraTransactor) extends DataStorage {
-  object CovidTable {
-    val name: String = "covid"
+object CovidTable {
+  val name: String = "covid"
 
-    object Fields {
-      val location: String = "location"
-      val isoCode: String = "iso_code"
-      val confirmed: String = "confirmed"
-      val dead: String = "dead"
-      val recovered: String = "recovered"
-    }
+  object Fields {
+    val location: String = "location"
+    val isoCode: String = "iso_code"
+    val confirmed: String = "confirmed"
+    val dead: String = "dead"
+    val recovered: String = "recovered"
   }
+}
 
-  override def create: UIO[Unit] = {
+class CassandraResource(val transactor: CassandraTransactor) extends DIResource.Simple[CassandraStorage] {
+  private def createKeyspace: ResultSet = {
     val createKeyspace =
       s"""
          |CREATE KEYSPACE IF NOT EXISTS ${transactor.config.keySpace}
@@ -76,19 +76,34 @@ class CassandraStorage(val transactor: CassandraTransactor) extends DataStorage 
          |'replication_factor' : 1
          | }""".stripMargin
 
-    val createTable =
-      s"""
-        |CREATE TABLE IF NOT EXISTS ${transactor.config.keySpace}.${CovidTable.name} (
-        |${CovidTable.Fields.location} TEXT PRIMARY KEY,
-        |${CovidTable.Fields.isoCode} TEXT,
-        |${CovidTable.Fields.confirmed} INT,
-        |${CovidTable.Fields.dead} INT,
-        |${CovidTable.Fields.recovered} INT)""".stripMargin
-
-    IO.effectTotal(transactor.session.execute(createKeyspace))
-      .map(_ => transactor.session.execute(createTable))
+    transactor.session.execute(createKeyspace)
   }
 
+  private def createTable: ResultSet = {
+    val createTable =
+      s"""
+         |CREATE TABLE IF NOT EXISTS ${transactor.config.keySpace}.${CovidTable.name} (
+         |${CovidTable.Fields.location} TEXT PRIMARY KEY,
+         |${CovidTable.Fields.isoCode} TEXT,
+         |${CovidTable.Fields.confirmed} INT,
+         |${CovidTable.Fields.dead} INT,
+         |${CovidTable.Fields.recovered} INT)""".stripMargin
+
+    transactor.session.execute(createTable)
+  }
+
+  override def acquire: Identity[CassandraStorage] = {
+    createKeyspace
+    createTable
+    new CassandraStorage(transactor)
+  }
+
+  override def release(resource: CassandraStorage): Identity[Unit] = {
+
+  }
+}
+
+class CassandraStorage(val transactor: CassandraTransactor) extends DataStorage {
   override def save(data: Seq[CovidData]): UIO[Unit] = {
     IO.effectTotal {
     data

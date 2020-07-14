@@ -41,22 +41,19 @@ trait WorldTest extends CovidTest {
 abstract class SaveCovidDataTest extends CovidTest {
   "Covid" should {
     "get and save" in {
-      (source: Source, storage: DataStorage) => {
+      (source: Source, storage: DataStorage) =>
         for {
-          _ <- storage.create //move to container definition
           data <- source.getInfected.to[Task]
           _ <- storage.save(data.items)
           all <- storage.selectAll
           count = all.length
           _ <- assertIO(count > 0)
         } yield ()
-      }
     }
 
     "most infected" in {
-      (source: Source, storage: DataStorage) => {
+      (source: Source, storage: DataStorage) =>
         for {
-          _ <- storage.create
           data <- source.getInfected.to[Task]
           _ <- storage.save(data.items)
           all <- storage.selectAll
@@ -64,7 +61,6 @@ abstract class SaveCovidDataTest extends CovidTest {
           maxFromDb = all.maxBy(_.confirmed)
           _ <- assertIO(maxFromApi == maxFromDb)
         } yield ()
-      }
     }
   }
 }
