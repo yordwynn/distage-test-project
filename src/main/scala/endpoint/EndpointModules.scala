@@ -36,7 +36,7 @@ object EndpointModules {
     make[Source].tagged(SourceAxis.World).from[WorldSource]
 
     // what if we have a chain of dependent resources? in witch order will they released?
-    make[CassandraTransactor].fromResource[CassandraTransactorResource]
+    make[CassandraTransactor].fromHas[CassandraTransactorResource]
     make[DataStorage].fromResource[CassandraResource]
     make[PortCheck].from(new PortCheck(3.seconds))
 

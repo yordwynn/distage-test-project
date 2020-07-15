@@ -1,6 +1,8 @@
 package covid.docker
 
-import dataStrorage.CassandraPortConfig
+import java.util.UUID
+
+import dataStrorage.{CassandraConfig, CassandraPortConfig}
 import distage.ModuleDef
 import izumi.distage.docker.Docker
 import izumi.distage.docker.modules.DockerSupportModule
@@ -23,4 +25,7 @@ object CassandraDockerModule extends ModuleDef {
       val knownAddress = docker.availablePorts.availablePorts(CassandraContainerDef.primaryPort).head
       CassandraPortConfig(knownAddress.hostV4, knownAddress.port)
   }
+  // randomize keyspace so that parallel tests with _different axes_ (in different envs) use different keyspaces
+  // and do not cause "Column ID mismatch error"
+  make[CassandraConfig].from(CassandraConfig(s"test_keyspace_${UUID.randomUUID().toString.take(8)}"))
 }
