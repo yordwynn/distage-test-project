@@ -3,7 +3,7 @@ package plugins
 import cats.effect.{ContextShift, IO}
 import covid19.sources.{RussianSource, Source, WorldSource}
 import dataSourses.MockSource
-import dataStrorage.{CassandraConfig, CassandraPortConfig, CassandraResource, CassandraStorage, CassandraTransactor, CassandraTransactorResource, DataStorage}
+import dataStrorage.{CassandraConfig, CassandraPortConfig, CassandraResource, CassandraTransactor, CassandraTransactorResource, DataStorage}
 import distage.ModuleDef
 import distage.plugins.PluginDef
 import izumi.distage.config.ConfigModuleDef

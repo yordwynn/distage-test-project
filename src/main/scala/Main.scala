@@ -3,6 +3,7 @@ import endpoint.{Endpoint, EndpointModules}
 import izumi.distage.model.definition.Activation
 import izumi.distage.model.plan.Roots
 import izumi.distage.model.reflection.DIKey
+import izumi.logstage.api.IzLogger
 import plugins.SourceAxis
 import zio.Task
 
@@ -25,7 +26,9 @@ object MainCassandra extends App {
         (_: Endpoint).run
       }
 
-    println(res)
+    println(zio.Runtime.default.unsafeRun(res))
+
+    val logger = IzLogger()
   }
 
   runWith(Activation(SourceAxis -> SourceAxis.World))
