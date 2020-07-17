@@ -68,7 +68,7 @@ object CovidTable {
 }
 
 class CassandraResource(config: CassandraConfig, transactor: CassandraTransactor) extends DIResource.NoClose[Task, CassandraStorage] {
-  private def createKeyspace: ZIO[Any, Throwable, ResultSet] = {
+  private def createKeyspace: IO[Throwable, ResultSet] = {
     val createKeyspace =
       s"""
          |CREATE KEYSPACE IF NOT EXISTS ${config.keySpace}

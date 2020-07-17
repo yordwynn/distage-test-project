@@ -27,8 +27,6 @@ object MainCassandra extends App {
       }
 
     println(zio.Runtime.default.unsafeRun(res))
-
-    val logger = IzLogger()
   }
 
   runWith(Activation(SourceAxis -> SourceAxis.World))
